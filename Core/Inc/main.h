@@ -65,8 +65,6 @@ void Error_Handler(void);
 #define Button1_GPIO_Port GPIOA
 #define Button2_Pin GPIO_PIN_15
 #define Button2_GPIO_Port GPIOA
-#define Button3_Pin GPIO_PIN_3
-#define Button3_GPIO_Port GPIOB
 #define Button4_Pin GPIO_PIN_4
 #define Button4_GPIO_Port GPIOB
 #define CoiChip_Pin GPIO_PIN_5

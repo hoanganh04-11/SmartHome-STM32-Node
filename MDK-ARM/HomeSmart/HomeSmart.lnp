@@ -19,6 +19,7 @@
 "homesmart\stm32f1xx_hal_i2c.o"
 "homesmart\stm32f1xx_hal_tim.o"
 "homesmart\stm32f1xx_hal_tim_ex.o"
+"homesmart\stm32f1xx_hal_uart.o"
 "homesmart\system_stm32f1xx.o"
 "homesmart\lcd_i2c.o"
 "homesmart\dht11.o"

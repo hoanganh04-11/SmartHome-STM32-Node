@@ -28,6 +28,7 @@
 #include "string.h"
 #include "Mq2.h"
 #include "LDR.h"
+#include "Button.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +51,10 @@ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 
 I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim1;
+
+UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
@@ -63,17 +67,20 @@ static void MX_I2C1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_ADC2_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define LCD_COLS 16
-#define DHT_READ_PERIOD_MS 2000U
-#define ANALOG_READ_PERIOD_MS 200U
-#define LCD_UPDATE_PERIOD_MS 500U
-#define LORA_SEND_PERIOD_MS 3000U
+
+#define DHT_READ_PERIOD_MS       2000U
+#define ANALOG_READ_PERIOD_MS     200U
+#define LCD_UPDATE_PERIOD_MS      500U
+#define BUTTON_SCAN_PERIOD_MS      20U
+#define LORA_SEND_PERIOD_MS      3000U
+#define DHT_SENSOR_COUNT            3U
 
 #define MQ2_SAMPLE_COUNT 10
 #define LDR_SAMPLE_COUNT 10
@@ -83,60 +90,101 @@ static void MX_ADC2_Init(void);
 
 #define LDR_THRESHOLD_ON 2500U
 #define LDR_THRESHOLD_OFF 2300U
+#define NODE_ID 1U
+#define FRAME_START_BYTE 0xAAU
+#define FRAME_END_BYTE   0x55U
 
 typedef enum
 {
-	APP_STATE_BOOT_INIT,
-	APP_STATE_SAMPLE_DHT11,
-	APP_STATE_SAMPLE_ANALOG,
-	APP_STATE_PROCESS_CONTROL,
-	APP_STATE_UPDATE_LCD,
-	APP_STATE_SEND_LORA,
-	APP_STATE_IDLE,
-}AppState_t;
+    SYSTEM_STATE_BOOT,
+    SYSTEM_STATE_READ_DHT,
+    SYSTEM_STATE_READ_ANALOG,
+    SYSTEM_STATE_SCAN_BUTTONS,
+    SYSTEM_STATE_CONTROL_OUTPUTS,
+    SYSTEM_STATE_UPDATE_SCREEN,
+    SYSTEM_STATE_SEND_PACKET,
+    SYSTEM_STATE_IDLE
+} SystemState_t;
 
 typedef struct
 {
-    AppState_t state;
-
+    SystemState_t state;
     uint32_t tick_dht;
     uint32_t tick_analog;
     uint32_t tick_lcd;
+    uint32_t tick_button;
     uint32_t tick_lora;
-
-    uint8_t  dht_valid;
-    uint8_t  temperature;
-    uint8_t  humidity;
-
+    uint8_t dht_valid[DHT_SENSOR_COUNT];
+    uint8_t temperature[DHT_SENSOR_COUNT];
+    uint8_t humidity[DHT_SENSOR_COUNT];
+    uint8_t temp_avg;
+    uint8_t hum_avg;
+    uint8_t dht_avg_valid;
     uint16_t mq2_adc;
     uint16_t ldr_adc;
-
     uint8_t relay1_on;
     uint8_t relay2_on;
     uint8_t buzzer_on;
-} AppContext_t;
+    uint8_t auto_mode;
+    uint8_t lcd_page;
+    uint8_t dht_display_index;
+    uint8_t send_now;
+    uint8_t gas_alarm_active;
+} SystemContext_t;
 
-DHT11_InitTypedef dht11;
+#pragma pack(push, 1)
+typedef struct
+{
+    uint8_t nodeId;
+    float temperature;
+    float humidity;
+    uint16_t gasValue;
+    uint16_t lightValue;
+    uint8_t relayStatus;
+    uint8_t buzzerStatus;
+} SensorData_t;
+
+typedef struct
+{
+    uint8_t startByte;
+    SensorData_t payload;
+    uint8_t checksum;
+    uint8_t endByte;
+} SensorFrame_t;
+#pragma pack(pop)
+
+DHT11_InitTypedef dht11_nodes[DHT_SENSOR_COUNT];
 I2C_LCD_HandleTypedef lcd1;
+
+Button_Typedef button_mode;
+Button_Typedef button_relay1;
+Button_Typedef button_relay2;
+Button_Typedef button_view;
 
 Relay_HandleTypeDef relay1 = {Relay1_GPIO_Port, Relay1_Pin, GPIO_PIN_RESET, RELAY_OFF};
 Relay_HandleTypeDef relay2 = {Relay2_GPIO_Port, Relay2_Pin, GPIO_PIN_RESET, RELAY_OFF};
 
-AppContext_t app;
+SystemContext_t system_ctx;
 
 char lcd_line1[17];
 char lcd_line2[17];
+uint8_t rx_data;
 
-static uint8_t App_IsTimeElapsed(uint32_t *last_tick, uint32_t period_ms)
+volatile uint8_t event_toggle_mode = 0U;
+volatile uint8_t event_toggle_relay1 = 0U;
+volatile uint8_t event_toggle_relay2 = 0U;
+volatile uint8_t event_toggle_lcd_page = 0U;
+volatile uint8_t event_send_now = 0U;
+
+static uint8_t IsTimeElapsed(uint32_t *last_tick, uint32_t period_ms)
 {
     uint32_t now = HAL_GetTick();
-
     if ((now - *last_tick) >= period_ms)
     {
         *last_tick = now;
-        return 1;
+        return 1U;
     }
-    return 0;
+    return 0U;
 }
 
 static void LCD_PrintLine(uint8_t row, const char *text)
@@ -144,9 +192,7 @@ static void LCD_PrintLine(uint8_t row, const char *text)
     char buf[17];
     memset(buf, ' ', 16);
     buf[16] = '\0';
-
     strncpy(buf, text, 16);
-
     lcd_gotoxy(&lcd1, 0, row);
     lcd_puts(&lcd1, buf);
 }
@@ -156,135 +202,253 @@ static void Buzzer_Set(uint8_t on)
     HAL_GPIO_WritePin(CoiChip_GPIO_Port, CoiChip_Pin, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
-static void App_SampleDHT11(AppContext_t *ctx)
+static uint8_t CalculateXorChecksum(const uint8_t *data, uint16_t len)
 {
-    if (App_IsTimeElapsed(&ctx->tick_dht, DHT_READ_PERIOD_MS))
-    {
-        ctx->dht_valid = readDHT11(&dht11);
+    uint8_t checksum = 0U;
+    uint16_t i;
 
-        if (ctx->dht_valid)
+    for (i = 0U; i < len; i++)
+    {
+        checksum ^= data[i];
+    }
+
+    return checksum;
+}
+
+static void InitButtonRuntime(Button_Typedef *button)
+{
+    uint8_t current = HAL_GPIO_ReadPin(button->GPIOx, button->GPIO_PIN);
+    button->btn_current = current;
+    button->btn_last = current;
+    button->btn_filter = current;
+}
+
+static void ReadDhtGroup(SystemContext_t *ctx)
+{
+    if (IsTimeElapsed(&ctx->tick_dht, DHT_READ_PERIOD_MS))
+    {
+        uint16_t temp_sum = 0U;
+        uint16_t hum_sum = 0U;
+        uint8_t valid_count = 0U;
+        uint8_t i;
+
+        for (i = 0U; i < DHT_SENSOR_COUNT; i++)
         {
-            ctx->temperature = dht11.temperature;
-            ctx->humidity    = dht11.humidity;
+            ctx->dht_valid[i] = readDHT11(&dht11_nodes[i]);
+            if (ctx->dht_valid[i] != 0U)
+            {
+                ctx->temperature[i] = dht11_nodes[i].temperature;
+                ctx->humidity[i] = dht11_nodes[i].humidity;
+                temp_sum += ctx->temperature[i];
+                hum_sum += ctx->humidity[i];
+                valid_count++;
+            }
+        }
+
+        if (valid_count > 0U)
+        {
+            ctx->temp_avg = (uint8_t)(temp_sum / valid_count);
+            ctx->hum_avg = (uint8_t)(hum_sum / valid_count);
+            ctx->dht_avg_valid = 1U;
+        }
+        else
+        {
+            ctx->dht_avg_valid = 0U;
         }
     }
 }
 
-static void App_SampleAnalog(AppContext_t *ctx)
+static void ReadAnalogSensors(SystemContext_t *ctx)
 {
-    if (App_IsTimeElapsed(&ctx->tick_analog, ANALOG_READ_PERIOD_MS))
+    if (IsTimeElapsed(&ctx->tick_analog, ANALOG_READ_PERIOD_MS))
     {
         ctx->mq2_adc = MQ2_Read_ADC_Average(&hadc1, MQ2_SAMPLE_COUNT);
         ctx->ldr_adc = LDR_Read_ADC_Average(&hadc2, LDR_SAMPLE_COUNT);
     }
 }
 
-static void App_ProcessControl(AppContext_t *ctx)
+static void ScanButtons(SystemContext_t *ctx)
 {
-    /* MQ2 -> Relay1 + Coi */
+    if (IsTimeElapsed(&ctx->tick_button, BUTTON_SCAN_PERIOD_MS))
+    {
+        button_handle(&button_mode);
+        button_handle(&button_relay1);
+        button_handle(&button_relay2);
+        button_handle(&button_view);
+    }
+
+    if (event_toggle_mode != 0U)
+    {
+        ctx->auto_mode ^= 1U;
+        event_toggle_mode = 0U;
+    }
+
+    if ((ctx->auto_mode == 0U) && (event_toggle_relay1 != 0U))
+    {
+        ctx->relay1_on ^= 1U;
+    }
+    event_toggle_relay1 = 0U;
+
+    if ((ctx->auto_mode == 0U) && (event_toggle_relay2 != 0U))
+    {
+        ctx->relay2_on ^= 1U;
+    }
+    event_toggle_relay2 = 0U;
+
+    if (event_toggle_lcd_page != 0U)
+    {
+        ctx->lcd_page ^= 1U;
+        event_toggle_lcd_page = 0U;
+    }
+
+    if (event_send_now != 0U)
+    {
+        ctx->send_now = 1U;
+        event_send_now = 0U;
+    }
+}
+
+static void ControlOutputs(SystemContext_t *ctx)
+{
     if (ctx->mq2_adc >= MQ2_THRESHOLD_ON)
     {
-        ctx->relay1_on = 1;
-        ctx->buzzer_on = 1;
+        ctx->gas_alarm_active = 1U;
     }
     else if (ctx->mq2_adc <= MQ2_THRESHOLD_OFF)
     {
-        ctx->relay1_on = 0;
-        ctx->buzzer_on = 0;
+        ctx->gas_alarm_active = 0U;
     }
 
-    /* LDR -> Relay2
-       Lưu ý: nếu mạch chia áp bị đảo logic thì đổi dấu so sánh lại */
-    if (ctx->ldr_adc >= LDR_THRESHOLD_ON)
+    if (ctx->auto_mode != 0U)
     {
-        ctx->relay2_on = 1;
-    }
-    else if (ctx->ldr_adc <= LDR_THRESHOLD_OFF)
-    {
-        ctx->relay2_on = 0;
+        ctx->relay1_on = (ctx->gas_alarm_active != 0U) ? 1U : 0U;
+
+        if (ctx->ldr_adc >= LDR_THRESHOLD_ON)
+        {
+            ctx->relay2_on = 1U;
+        }
+        else if (ctx->ldr_adc <= LDR_THRESHOLD_OFF)
+        {
+            ctx->relay2_on = 0U;
+        }
     }
 
+    ctx->buzzer_on = ctx->gas_alarm_active;
     Relay_SetState(&relay1, ctx->relay1_on ? RELAY_ON : RELAY_OFF);
     Relay_SetState(&relay2, ctx->relay2_on ? RELAY_ON : RELAY_OFF);
     Buzzer_Set(ctx->buzzer_on);
 }
 
-static void App_UpdateLCD(AppContext_t *ctx)
+static void UpdateScreen(SystemContext_t *ctx)
 {
-    if (App_IsTimeElapsed(&ctx->tick_lcd, LCD_UPDATE_PERIOD_MS))
+    if (IsTimeElapsed(&ctx->tick_lcd, LCD_UPDATE_PERIOD_MS))
     {
-        if (ctx->dht_valid)
+        if (ctx->lcd_page == 0U)
         {
-            snprintf(lcd_line1, sizeof(lcd_line1), "T:%2uC H:%2u%%", ctx->temperature, ctx->humidity);
+            if (ctx->dht_avg_valid != 0U)
+            {
+                snprintf(lcd_line1, sizeof(lcd_line1), "AvgT:%2uC H:%2u%%", ctx->temp_avg, ctx->hum_avg);
+            }
+            else
+            {
+                snprintf(lcd_line1, sizeof(lcd_line1), "DHT Avg Invalid");
+            }
+            snprintf(lcd_line2, sizeof(lcd_line2), "G:%4u L:%4u", ctx->mq2_adc, ctx->ldr_adc);
         }
         else
         {
-            snprintf(lcd_line1, sizeof(lcd_line1), "DHT11 Read Fail");
+            uint8_t idx = ctx->dht_display_index;
+            if (ctx->dht_valid[idx] != 0U)
+            {
+                snprintf(lcd_line1, sizeof(lcd_line1), "D%u T:%2u H:%2u",
+                         (unsigned int)(idx + 1U),
+                         (unsigned int)ctx->temperature[idx],
+                         (unsigned int)ctx->humidity[idx]);
+            }
+            else
+            {
+                snprintf(lcd_line1, sizeof(lcd_line1), "D%u Read Fail", (unsigned int)(idx + 1U));
+            }
+            snprintf(lcd_line2, sizeof(lcd_line2), "%s R1:%u R2:%u",
+                     (ctx->auto_mode != 0U) ? "AUTO" : "MAN ",
+                     (unsigned int)ctx->relay1_on,
+                     (unsigned int)ctx->relay2_on);
+            ctx->dht_display_index++;
+            if (ctx->dht_display_index >= DHT_SENSOR_COUNT)
+            {
+                ctx->dht_display_index = 0U;
+            }
         }
-
-        snprintf(lcd_line2, sizeof(lcd_line2), "G:%4u L:%4u", ctx->mq2_adc, ctx->ldr_adc);
 
         LCD_PrintLine(0, lcd_line1);
         LCD_PrintLine(1, lcd_line2);
     }
 }
 
-static void App_SendLoRa(AppContext_t *ctx)
+static void SendTelemetry(SystemContext_t *ctx)
 {
-    if (App_IsTimeElapsed(&ctx->tick_lora, LORA_SEND_PERIOD_MS))
+    if (IsTimeElapsed(&ctx->tick_lora, LORA_SEND_PERIOD_MS) || (ctx->send_now != 0U))
     {
-        /* Chưa có file UART/AS32 nên tôi để state này sẵn cho bạn.
-           Sau khi cấu hình USART, bạn có thể gửi chuỗi kiểu:
-           TEMP=xx,HUM=yy,MQ2=zzzz,LDR=zzzz,R1=x,R2=x,BZ=x\r\n
-           
-           Ví dụ:
-           char tx_buf[80];
-           int len = snprintf(tx_buf, sizeof(tx_buf),
-                              "TEMP=%u,HUM=%u,MQ2=%u,LDR=%u,R1=%u,R2=%u,BZ=%u\r\n",
-                              ctx->temperature, ctx->humidity, ctx->mq2_adc, ctx->ldr_adc,
-                              ctx->relay1_on, ctx->relay2_on, ctx->buzzer_on);
+        SensorFrame_t frame;
 
-           HAL_UART_Transmit_IT(&huart1, (uint8_t*)tx_buf, len);
-        */
+        frame.startByte = FRAME_START_BYTE;
+        frame.payload.nodeId = NODE_ID;
+        frame.payload.temperature = (float)ctx->temp_avg;
+        frame.payload.humidity = (float)ctx->hum_avg;
+        frame.payload.gasValue = ctx->mq2_adc;
+        frame.payload.lightValue = ctx->ldr_adc;
+        frame.payload.relayStatus = (uint8_t)((ctx->relay1_on ? 0x01U : 0x00U) |
+                                              (ctx->relay2_on ? 0x02U : 0x00U));
+        frame.payload.buzzerStatus = ctx->buzzer_on;
+        frame.checksum = CalculateXorChecksum((const uint8_t*)&frame.payload, sizeof(frame.payload));
+        frame.endByte = FRAME_END_BYTE;
+
+        HAL_UART_Transmit(&huart1, (uint8_t*)&frame, sizeof(frame), 100);
+        ctx->send_now = 0U;
     }
 }
 
-static void App_RunStateMachine(AppContext_t *ctx)
+static void RunSystemStateMachine(SystemContext_t *ctx)
 {
     switch (ctx->state)
     {
-        case APP_STATE_BOOT_INIT:
-            ctx->state = APP_STATE_SAMPLE_DHT11;
+        case SYSTEM_STATE_BOOT:
+            ctx->state = SYSTEM_STATE_READ_DHT;
             break;
 
-        case APP_STATE_SAMPLE_DHT11:
-            App_SampleDHT11(ctx);
-            ctx->state = APP_STATE_SAMPLE_ANALOG;
+        case SYSTEM_STATE_READ_DHT:
+            ReadDhtGroup(ctx);
+            ctx->state = SYSTEM_STATE_READ_ANALOG;
             break;
 
-        case APP_STATE_SAMPLE_ANALOG:
-            App_SampleAnalog(ctx);
-            ctx->state = APP_STATE_PROCESS_CONTROL;
+        case SYSTEM_STATE_READ_ANALOG:
+            ReadAnalogSensors(ctx);
+            ctx->state = SYSTEM_STATE_SCAN_BUTTONS;
             break;
 
-        case APP_STATE_PROCESS_CONTROL:
-            App_ProcessControl(ctx);
-            ctx->state = APP_STATE_UPDATE_LCD;
+        case SYSTEM_STATE_SCAN_BUTTONS:
+            ScanButtons(ctx);
+            ctx->state = SYSTEM_STATE_CONTROL_OUTPUTS;
             break;
 
-        case APP_STATE_UPDATE_LCD:
-            App_UpdateLCD(ctx);
-            ctx->state = APP_STATE_SEND_LORA;
+        case SYSTEM_STATE_CONTROL_OUTPUTS:
+            ControlOutputs(ctx);
+            ctx->state = SYSTEM_STATE_UPDATE_SCREEN;
             break;
 
-        case APP_STATE_SEND_LORA:
-            App_SendLoRa(ctx);
-            ctx->state = APP_STATE_IDLE;
+        case SYSTEM_STATE_UPDATE_SCREEN:
+            UpdateScreen(ctx);
+            ctx->state = SYSTEM_STATE_SEND_PACKET;
             break;
 
-        case APP_STATE_IDLE:
+        case SYSTEM_STATE_SEND_PACKET:
+            SendTelemetry(ctx);
+            ctx->state = SYSTEM_STATE_IDLE;
+            break;
+
+        case SYSTEM_STATE_IDLE:
         default:
-            ctx->state = APP_STATE_SAMPLE_DHT11;
+            ctx->state = SYSTEM_STATE_READ_DHT;
             break;
     }
 }
@@ -324,9 +488,14 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM1_Init();
   MX_ADC2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 	//------------------DHT11----------------------
-	DHT11_Init(&dht11, &htim1, GPIOA, GPIO_PIN_11);
+	/* USER CODE BEGIN 2 */
+	//------------------DHT11----------------------
+	DHT11_Init(&dht11_nodes[0], &htim1, GPIOA, GPIO_PIN_11);
+	DHT11_Init(&dht11_nodes[1], &htim1, GPIOA, GPIO_PIN_8);
+	DHT11_Init(&dht11_nodes[2], &htim1, GPIOA, GPIO_PIN_9);
 
 	//------------------LCD------------------------
 	lcd1.hi2c = &hi2c1;
@@ -339,11 +508,26 @@ int main(void)
 	Relay_Init(&relay2);
 	Buzzer_Set(0);
 
-	memset(&app, 0, sizeof(app));
-	app.state = APP_STATE_BOOT_INIT;
+	memset(&system_ctx, 0, sizeof(system_ctx));
+	system_ctx.state = SYSTEM_STATE_BOOT;
+	system_ctx.auto_mode = 1U;
+
+	button_init(&button_mode, GPIOA, GPIO_PIN_12);  // A12
+	button_init(&button_relay1, GPIOA, GPIO_PIN_15); // A15
+	button_init(&button_relay2, GPIOB, GPIO_PIN_3);  // B3
+	button_init(&button_view, GPIOB, GPIO_PIN_4);    // B4
+
+	InitButtonRuntime(&button_mode);
+	InitButtonRuntime(&button_relay1);
+	InitButtonRuntime(&button_relay2);
+	InitButtonRuntime(&button_view);
 
 	LCD_PrintLine(0, "System Booting");
 	LCD_PrintLine(1, "STM32 IoT Node");	
+
+    // --- THÊM DÒNG NÀY ĐỂ BẮT ĐẦU LẮNG NGHE LỆNH TỪ ESP32 ---
+    HAL_UART_Receive_IT(&huart1, &rx_data, 1); 
+  /* USER CODE END 2 */
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -353,7 +537,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		App_RunStateMachine(&app);
+		RunSystemStateMachine(&system_ctx);
 	}
   /* USER CODE END 3 */
 }
@@ -578,6 +762,39 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 9600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -595,7 +812,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, Relay2_Pin|Relay1_Pin|GPIO_PIN_11, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, Relay2_Pin|Relay1_Pin|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(CoiChip_GPIO_Port, CoiChip_Pin, GPIO_PIN_RESET);
@@ -606,8 +824,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Relay2_Pin Relay1_Pin PA11 */
-  GPIO_InitStruct.Pin = Relay2_Pin|Relay1_Pin|GPIO_PIN_11;
+  /*Configure GPIO pins : Relay2_Pin Relay1_Pin PA8 PA9
+                           PA11 */
+  GPIO_InitStruct.Pin = Relay2_Pin|Relay1_Pin|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -619,11 +839,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Button3_Pin Button4_Pin */
-  GPIO_InitStruct.Pin = Button3_Pin|Button4_Pin;
+  /*Configure GPIO pin : PB3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Button4_Pin */
+  GPIO_InitStruct.Pin = Button4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Button4_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CoiChip_Pin */
   GPIO_InitStruct.Pin = CoiChip_Pin;
@@ -638,6 +864,46 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void btn_press_short_callback(Button_Typedef *ButtonX)
+{
+  if (ButtonX == &button_mode)
+  {
+    event_toggle_mode = 1U;
+  }
+  else if (ButtonX == &button_relay1)
+  {
+    event_toggle_relay1 = 1U;
+  }
+  else if (ButtonX == &button_relay2)
+  {
+    event_toggle_relay2 = 1U;
+  }
+  else if (ButtonX == &button_view)
+  {
+    event_toggle_lcd_page = 1U;
+  }
+}
+
+void btn_press_timeout_callback(Button_Typedef *ButtonX)
+{
+  if (ButtonX == &button_view)
+  {
+    event_send_now = 1U;
+  }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    if ((rx_data == 'S') || (rx_data == 's'))
+    {
+      system_ctx.send_now = 1U;
+    }
+
+    HAL_UART_Receive_IT(&huart1, &rx_data, 1);
+  }
+}
 
 /* USER CODE END 4 */
 

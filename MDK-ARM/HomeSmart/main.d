@@ -30,6 +30,7 @@ homesmart\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h
 homesmart\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 homesmart\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 homesmart\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
+homesmart\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 homesmart\main.o: ../myLib/inc/LCD_I2C.h
 homesmart\main.o: ../myLib/inc/DHT11.h
 homesmart\main.o: ../myLib/inc/Relay.h
@@ -37,3 +38,4 @@ homesmart\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 homesmart\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 homesmart\main.o: ../myLib/inc/Mq2.h
 homesmart\main.o: ../myLib/inc/LDR.h
+homesmart\main.o: ../myLib/inc/Button.h
