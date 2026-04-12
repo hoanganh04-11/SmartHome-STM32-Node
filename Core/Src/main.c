@@ -79,7 +79,7 @@ static void MX_USART1_UART_Init(void);
 #define ANALOG_READ_PERIOD_MS     200U
 #define LCD_UPDATE_PERIOD_MS      500U
 #define BUTTON_SCAN_PERIOD_MS      20U
-#define LORA_SEND_PERIOD_MS      3000U
+#define LORA_SEND_PERIOD_MS     10000U
 #define DHT_SENSOR_COUNT            2U
 
 #define MQ2_SAMPLE_COUNT 10
@@ -175,10 +175,8 @@ volatile uint8_t event_toggle_relay2 = 0U;
 volatile uint8_t event_toggle_lcd_page = 0U;
 volatile uint8_t event_send_now = 0U;
 
-#define LORA_RX_BUFFER_SIZE 32
-
 uint8_t lora_rx_byte;
-char lora_rx_buffer[LORA_RX_BUFFER_SIZE];
+uint8_t lora_rx_buffer[sizeof(SensorFrame_t)];
 uint8_t lora_rx_idx = 0;
 
 static uint8_t IsTimeElapsed(uint32_t *last_tick, uint32_t period_ms)
@@ -358,11 +356,11 @@ static void UpdateScreen(SystemContext_t *ctx)
         {
             if (ctx->dht_avg_valid != 0U)
             {
-                snprintf(lcd_line1, sizeof(lcd_line1), "AvgT:%2uC H:%2u%%", ctx->temp_avg, ctx->hum_avg);
+							snprintf(lcd_line1, sizeof(lcd_line1), "T:%2uC H:%2u%%", ctx->temp_avg, ctx->hum_avg);
             }
             else
             {
-                snprintf(lcd_line1, sizeof(lcd_line1), "DHT Avg Invalid");
+                snprintf(lcd_line1, sizeof(lcd_line1), "DHT Invalid");
             }
             snprintf(lcd_line2, sizeof(lcd_line2), "G:%4u L:%4u", ctx->mq2_adc, ctx->ldr_adc);
         }
@@ -880,23 +878,36 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
     {
-        if (lora_rx_byte == '\n' || lora_rx_byte == '\r' || lora_rx_byte == '#')
+        if (lora_rx_byte == FRAME_START_BYTE)
         {
-            lora_rx_buffer[lora_rx_idx] = '\0';
-            if (lora_rx_idx > 0 && system_ctx.auto_mode == 0U)
-            {
-                if (strstr(lora_rx_buffer, "R1ON") != NULL || lora_rx_buffer[0] == '1') system_ctx.relay1_on = 1;
-                else if (strstr(lora_rx_buffer, "R1OFF") != NULL || lora_rx_buffer[0] == '2') system_ctx.relay1_on = 0;
-                else if (strstr(lora_rx_buffer, "R2ON") != NULL || lora_rx_buffer[0] == '3') system_ctx.relay2_on = 1;
-                else if (strstr(lora_rx_buffer, "R2OFF") != NULL || lora_rx_buffer[0] == '4') system_ctx.relay2_on = 0;
-            }
-            lora_rx_idx = 0;
+            lora_rx_idx = 0U;
+            lora_rx_buffer[lora_rx_idx++] = lora_rx_byte;
         }
-        else
+        else if (lora_rx_idx > 0U)
         {
-            if (lora_rx_idx < LORA_RX_BUFFER_SIZE - 1)
+            if (lora_rx_idx < sizeof(SensorFrame_t))
             {
-                lora_rx_buffer[lora_rx_idx++] = (char)lora_rx_byte;
+                lora_rx_buffer[lora_rx_idx++] = lora_rx_byte;
+            }
+
+            if (lora_rx_idx == sizeof(SensorFrame_t))
+            {
+                SensorFrame_t rx_frame;
+                uint8_t expected_checksum;
+
+                memcpy(&rx_frame, lora_rx_buffer, sizeof(SensorFrame_t));
+
+                if ((rx_frame.startByte == FRAME_START_BYTE) && (rx_frame.endByte == FRAME_END_BYTE))
+                {
+                    expected_checksum = CalculateXorChecksum((const uint8_t *)&rx_frame.payload, sizeof(rx_frame.payload));
+                    if ((rx_frame.checksum == expected_checksum) && (system_ctx.auto_mode == 0U))
+                    {
+                        system_ctx.relay1_on = ((rx_frame.payload.relayStatus & 0x01U) != 0U) ? 1U : 0U;
+                        system_ctx.relay2_on = ((rx_frame.payload.relayStatus & 0x02U) != 0U) ? 1U : 0U;
+                    }
+                }
+
+                lora_rx_idx = 0U;
             }
         }
         HAL_UART_Receive_IT(&huart1, &lora_rx_byte, 1);
