@@ -27,6 +27,9 @@
 "homesmart\button.o"
 "homesmart\mq2.o"
 "homesmart\ldr.o"
+"homesmart\system_control.o"
+"homesmart\node_buttons.o"
+"homesmart\lora_node.o"
 --strict --scatter "HomeSmart\HomeSmart.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

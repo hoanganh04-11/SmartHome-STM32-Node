@@ -1,5 +1,5 @@
 homesmart\button.o: ..\myLib\src\Button.c
-homesmart\button.o: ../myLib/inc/Button.h
+homesmart\button.o: ..\myLib\inc\Button.h
 homesmart\button.o: ../Core/Inc/main.h
 homesmart\button.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 homesmart\button.o: ../Core/Inc/stm32f1xx_hal_conf.h

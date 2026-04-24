@@ -1,5 +1,5 @@
 homesmart\relay.o: ..\myLib\src\Relay.c
-homesmart\relay.o: ../myLib/inc/Relay.h
+homesmart\relay.o: ..\myLib\inc\Relay.h
 homesmart\relay.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 homesmart\relay.o: ../Core/Inc/stm32f1xx_hal_conf.h
 homesmart\relay.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h

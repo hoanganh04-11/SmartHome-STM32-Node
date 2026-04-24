@@ -1,5 +1,5 @@
 homesmart\dht11.o: ..\myLib\src\DHT11.c
-homesmart\dht11.o: ../myLib/inc/DHT11.h
+homesmart\dht11.o: ..\myLib\inc\DHT11.h
 homesmart\dht11.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 homesmart\dht11.o: ../Core/Inc/stm32f1xx_hal_conf.h
 homesmart\dht11.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h

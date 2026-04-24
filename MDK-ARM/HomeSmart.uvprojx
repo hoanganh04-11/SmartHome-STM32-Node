@@ -81,7 +81,7 @@
           </BeforeMake>
           <AfterMake>
             <RunUserProg1>0</RunUserProg1>
-            <RunUserProg2>1</RunUserProg2>
+            <RunUserProg2>0</RunUserProg2>
             <UserProg1Name></UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../myLib/inc;../myLib/src</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;..\myLib\src;..\myLib\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -797,6 +797,21 @@
               <FileName>LDR.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\myLib\src\LDR.c</FilePath>
+            </File>
+            <File>
+              <FileName>system_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myLib\src\system_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>node_buttons.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myLib\src\node_buttons.c</FilePath>
+            </File>
+            <File>
+              <FileName>lora_node.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myLib\src\lora_node.c</FilePath>
             </File>
           </Files>
         </Group>

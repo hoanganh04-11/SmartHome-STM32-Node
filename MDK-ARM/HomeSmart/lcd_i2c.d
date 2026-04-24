@@ -1,5 +1,5 @@
 homesmart\lcd_i2c.o: ..\myLib\src\LCD_I2C.c
-homesmart\lcd_i2c.o: ../myLib/inc/LCD_I2C.h
+homesmart\lcd_i2c.o: ..\myLib\inc\LCD_I2C.h
 homesmart\lcd_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 homesmart\lcd_i2c.o: ../Core/Inc/stm32f1xx_hal_conf.h
 homesmart\lcd_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h

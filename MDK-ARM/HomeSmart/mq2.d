@@ -1,5 +1,5 @@
 homesmart\mq2.o: ..\myLib\src\Mq2.c
-homesmart\mq2.o: ../myLib/inc/Mq2.h
+homesmart\mq2.o: ..\myLib\inc\Mq2.h
 homesmart\mq2.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 homesmart\mq2.o: ../Core/Inc/stm32f1xx_hal_conf.h
 homesmart\mq2.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h

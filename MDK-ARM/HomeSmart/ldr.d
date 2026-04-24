@@ -1,5 +1,5 @@
 homesmart\ldr.o: ..\myLib\src\LDR.c
-homesmart\ldr.o: ../myLib/inc/LDR.h
+homesmart\ldr.o: ..\myLib\inc\LDR.h
 homesmart\ldr.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 homesmart\ldr.o: ../Core/Inc/stm32f1xx_hal_conf.h
 homesmart\ldr.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h
