@@ -15,7 +15,7 @@
 /* ============================================================
  * HARDWARE
  * ============================================================ */
-#define DHT_SENSOR_COUNT         1U    /* Chỉ dùng 1 DHT11 */
+#define DHT_SENSOR_COUNT         2U    /* 2 DHT11: PA6, PA11 */
 #define MQ2_SAMPLE_COUNT        10
 #define LDR_SAMPLE_COUNT        10
 

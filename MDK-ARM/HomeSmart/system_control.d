@@ -38,5 +38,6 @@ homesmart\system_control.o: ..\myLib\inc\DHT11.h
 homesmart\system_control.o: ..\myLib\inc\Relay.h
 homesmart\system_control.o: ..\myLib\inc\Mq2.h
 homesmart\system_control.o: ..\myLib\inc\LDR.h
+homesmart\system_control.o: ..\myLib\inc\lora_node.h
 homesmart\system_control.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 homesmart\system_control.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h

@@ -1,4 +1,5 @@
 #include "node_buttons.h"
+#include "lora_node.h"     /* flag_send_data */
 
 /* ============================================================
  * Button handles
@@ -65,12 +66,14 @@ void NodeButtons_Scan(SystemContext_t *ctx)
     {
         ctx->auto_mode ^= 1U;
         event_toggle_mode = 0U;
+        flag_send_data = 1U;    /* Gửi trạng thái mới lên ESP32 */
     }
 
     /* ---- Xử lý event: toggle Relay 1 (chỉ khi manual) ---- */
     if ((ctx->auto_mode == 0U) && (event_toggle_relay1 != 0U))
     {
         ctx->relay1_on ^= 1U;
+        flag_send_data = 1U;    /* Gửi trạng thái mới lên ESP32 */
     }
     event_toggle_relay1 = 0U;
 
@@ -78,6 +81,7 @@ void NodeButtons_Scan(SystemContext_t *ctx)
     if ((ctx->auto_mode == 0U) && (event_toggle_relay2 != 0U))
     {
         ctx->relay2_on ^= 1U;
+        flag_send_data = 1U;    /* Gửi trạng thái mới lên ESP32 */
     }
     event_toggle_relay2 = 0U;
 
@@ -86,6 +90,7 @@ void NodeButtons_Scan(SystemContext_t *ctx)
     {
         ctx->lcd_page ^= 1U;
         event_toggle_lcd_page = 0U;
+        flag_send_data = 1U;    /* Gửi trạng thái mới lên ESP32 */
     }
 }
 

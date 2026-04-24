@@ -4,6 +4,7 @@
 #include "Relay.h"
 #include "Mq2.h"
 #include "LDR.h"
+#include "lora_node.h"     /* flag_send_data */
 #include <string.h>
 #include <stdio.h>
 
@@ -92,11 +93,30 @@ static void ReadDhtSensor(SystemContext_t *ctx)
 {
     if (IsTimeElapsed(&ctx->tick_dht, DHT_READ_PERIOD_MS))
     {
-        ctx->dht_valid = readDHT11(&dht11_nodes[0]);
-        if (ctx->dht_valid != 0U)
+        float    temp_sum   = 0.0f;
+        float    hum_sum    = 0.0f;
+        uint8_t  valid_count = 0U;
+        uint8_t  i;
+
+        for (i = 0U; i < (uint8_t)DHT_SENSOR_COUNT; i++)
         {
-            ctx->temperature = (float)dht11_nodes[0].temperature;
-            ctx->humidity    = (float)dht11_nodes[0].humidity;
+            if (readDHT11(&dht11_nodes[i]) != 0U)
+            {
+                temp_sum += (float)dht11_nodes[i].temperature;
+                hum_sum  += (float)dht11_nodes[i].humidity;
+                valid_count++;
+            }
+        }
+
+        if (valid_count > 0U)
+        {
+            ctx->dht_valid   = 1U;
+            ctx->temperature = temp_sum / (float)valid_count;
+            ctx->humidity    = hum_sum  / (float)valid_count;
+        }
+        else
+        {
+            ctx->dht_valid = 0U;
         }
     }
 }
@@ -118,6 +138,9 @@ static void ReadAnalogSensors(SystemContext_t *ctx)
  * ============================================================ */
 static void ControlOutputs(SystemContext_t *ctx)
 {
+    /* ---- Lưu trạng thái cảnh báo trước đó để phát hiện cạnh ---- */
+    uint8_t prev_alert = ctx->alert_active;
+
     /* ---- Tính cảnh báo gas với hysteresis ---- */
     uint16_t thr_on  = ctx->gas_threshold;
     uint16_t thr_off = (ctx->gas_threshold > 200U)
@@ -132,22 +155,33 @@ static void ControlOutputs(SystemContext_t *ctx)
         ctx->alert_active = 0U;
     }
 
+    /* ---- Gửi dữ liệu ngay khi cảnh báo thay đổi trạng thái ---- */
+    if (ctx->alert_active != prev_alert)
+    {
+        flag_send_data = 1U;
+    }
+
     /* ---- Chế độ tự động ---- */
     if (ctx->auto_mode != 0U)
     {
         /* Relay 1: bật khi phát hiện gas vượt ngưỡng */
         ctx->relay1_on = (ctx->alert_active != 0U) ? 1U : 0U;
 
-        /* Relay 2: bật khi nhiệt độ >= ngưỡng nhiệt */
-        ctx->relay2_on = (ctx->temperature >= (float)ctx->temp_threshold)
-                         ? 1U : 0U;
+        /* Relay 2: bật khi nhiệt độ >= ngưỡng nhiệt, gửi dữ liệu khi thay đổi */
+        uint8_t prev_r2 = ctx->relay2_on;
+        ctx->relay2_on  = (ctx->temperature >= (float)ctx->temp_threshold) ? 1U : 0U;
+        if (ctx->relay2_on != prev_r2)
+        {
+            flag_send_data = 1U;   /* Nhiệt độ vượt / về dưới ngưỡng */
+        }
     }
 
     /* Còi: theo alert bất kể chế độ */
     ctx->buzzer_on = ctx->alert_active;
 
-    Relay_SetState(&relay1, ctx->relay1_on ? RELAY_ON : RELAY_OFF);
-    Relay_SetState(&relay2, ctx->relay2_on ? RELAY_ON : RELAY_OFF);
+    /* Relay active-low: RELAY_OFF = GPIO_RESET = cuộn dây cấp điện = BẬT vật lý */
+    Relay_SetState(&relay1, ctx->relay1_on ? RELAY_OFF : RELAY_ON);
+    Relay_SetState(&relay2, ctx->relay2_on ? RELAY_OFF : RELAY_ON);
     Buzzer_Set(ctx->buzzer_on);
 }
 

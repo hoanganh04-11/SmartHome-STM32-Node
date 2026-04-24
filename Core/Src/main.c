@@ -103,8 +103,9 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  /* ---- DHT11 (1 sensor, PA11) ---- */
-  DHT11_Init(&dht11_nodes[0], &htim1, GPIOA, GPIO_PIN_11);
+  /* ---- DHT11 (2 sensors: PA6, PA11) ---- */
+  DHT11_Init(&dht11_nodes[0], &htim1, GPIOA, GPIO_PIN_6);
+  DHT11_Init(&dht11_nodes[1], &htim1, GPIOA, GPIO_PIN_11);
 
   /* ---- LCD I2C ---- */
   HAL_Delay(100);
@@ -333,7 +334,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* PA3, PA4, PA6, PA11: Output PP (Relay, DHT data lines as output init) */
+  /* PA3, PA4, PA6, PA11: Output PP (Relay, DHT11 data lines init) */
   GPIO_InitStruct.Pin   = Relay2_Pin | Relay1_Pin | GPIO_PIN_6 | GPIO_PIN_11;
   GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;

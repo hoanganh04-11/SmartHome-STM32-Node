@@ -35,3 +35,4 @@ homesmart\node_buttons.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart
 homesmart\node_buttons.o: ..\myLib\inc\Button.h
 homesmart\node_buttons.o: ..\myLib\inc\system_control.h
 homesmart\node_buttons.o: ..\myLib\inc\node_config.h
+homesmart\node_buttons.o: ..\myLib\inc\lora_node.h

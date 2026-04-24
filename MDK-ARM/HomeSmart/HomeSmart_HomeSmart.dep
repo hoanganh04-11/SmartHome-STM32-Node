@@ -1,7 +1,7 @@
 Dependencies for Project 'HomeSmart', Target 'HomeSmart': (DO NOT MODIFY !)
 CompilerVersion: 5060750::V5.06 update 6 (build 750)::.\ARMCC
 F (startup_stm32f103xb.s)(0x69C4E16A)(--cpu Cortex-M3 -g --apcs=interwork -I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"--pd "__UVISION_VERSION SETA 531" --pd "_RTE_ SETA 1" --pd "STM32F10X_MD SETA 1" --pd "_RTE_ SETA 1"--list startup_stm32f103xb.lst --xref -o homesmart\startup_stm32f103xb.o --depend homesmart\startup_stm32f103xb.d)
-F (../Core/Src/main.c)(0x69EB19D0)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\main.o --omf_browse homesmart\main.crf --depend homesmart\main.d)
+F (../Core/Src/main.c)(0x69EB4ABB)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\main.o --omf_browse homesmart\main.crf --depend homesmart\main.d)
 I (../Core/Inc/main.h)(0x69C4E168)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h)(0x69A6654D)
 I (../Core/Inc/stm32f1xx_hal_conf.h)(0x69C4E167)
@@ -33,7 +33,7 @@ I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h)(0x69A6654D)
-I (..\myLib\inc\node_config.h)(0x69E9D5AF)
+I (..\myLib\inc\node_config.h)(0x69EB4AA9)
 I (..\myLib\inc\lora_node.h)(0x69E9D631)
 I (..\myLib\inc\system_control.h)(0x69EB15A9)
 I (..\myLib\inc\node_buttons.h)(0x69E9D6A8)
@@ -857,9 +857,9 @@ I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h)(0x69A6654D)
-F (..\myLib\src\system_control.c)(0x69EB1A1B)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\system_control.o --omf_browse homesmart\system_control.crf --depend homesmart\system_control.d)
+F (..\myLib\src\system_control.c)(0x69EB4A8F)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\system_control.o --omf_browse homesmart\system_control.crf --depend homesmart\system_control.d)
 I (..\myLib\inc\system_control.h)(0x69EB15A9)
-I (..\myLib\inc\node_config.h)(0x69E9D5AF)
+I (..\myLib\inc\node_config.h)(0x69EB4AA9)
 I (../Core/Inc/main.h)(0x69C4E168)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h)(0x69A6654D)
 I (../Core/Inc/stm32f1xx_hal_conf.h)(0x69C4E167)
@@ -896,9 +896,10 @@ I (..\myLib\inc\DHT11.h)(0x69B8E686)
 I (..\myLib\inc\Relay.h)(0x69B8E6B3)
 I (..\myLib\inc\Mq2.h)(0x69B7FB40)
 I (..\myLib\inc\LDR.h)(0x69B8E731)
+I (..\myLib\inc\lora_node.h)(0x69E9D631)
 I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5EC78414)
 I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5EC7840C)
-F (..\myLib\src\node_buttons.c)(0x69E9D6BF)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\node_buttons.o --omf_browse homesmart\node_buttons.crf --depend homesmart\node_buttons.d)
+F (..\myLib\src\node_buttons.c)(0x69EB473E)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\node_buttons.o --omf_browse homesmart\node_buttons.crf --depend homesmart\node_buttons.d)
 I (..\myLib\inc\node_buttons.h)(0x69E9D6A8)
 I (../Core/Inc/main.h)(0x69C4E168)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h)(0x69A6654D)
@@ -933,10 +934,11 @@ I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h)(0x69A6654D)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h)(0x69A6654D)
 I (..\myLib\inc\Button.h)(0x69831DA4)
 I (..\myLib\inc\system_control.h)(0x69EB15A9)
-I (..\myLib\inc\node_config.h)(0x69E9D5AF)
+I (..\myLib\inc\node_config.h)(0x69EB4AA9)
+I (..\myLib\inc\lora_node.h)(0x69E9D631)
 F (..\myLib\src\lora_node.c)(0x69E9D64F)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include -I ..\myLib\src -I ..\myLib\inc-I.\RTE\_HomeSmart-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include"-I"C:\Users\Hoang Anh\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include"-D__UVISION_VERSION="531" -D_RTE_ -DSTM32F10X_MD -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F103xB-o homesmart\lora_node.o --omf_browse homesmart\lora_node.crf --depend homesmart\lora_node.d)
 I (..\myLib\inc\lora_node.h)(0x69E9D631)
-I (..\myLib\inc\node_config.h)(0x69E9D5AF)
+I (..\myLib\inc\node_config.h)(0x69EB4AA9)
 I (../Core/Inc/main.h)(0x69C4E168)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h)(0x69A6654D)
 I (../Core/Inc/stm32f1xx_hal_conf.h)(0x69C4E167)
